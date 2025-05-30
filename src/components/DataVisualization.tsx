@@ -71,14 +71,15 @@ const DataVisualization = ({ results }: DataVisualizationProps) => {
 
     results.forEach(result => {
       Object.entries(result.skor_kepercayaan).forEach(([category, score]) => {
-        let range;
+        let range: keyof typeof scoreRanges;
         if (score < 0.2) range = 'Sangat Rendah (0-0.2)';
         else if (score < 0.4) range = 'Rendah (0.2-0.4)';
         else if (score < 0.6) range = 'Sedang (0.4-0.6)';
         else if (score < 0.8) range = 'Tinggi (0.6-0.8)';
         else range = 'Sangat Tinggi (0.8-1.0)';
 
-        scoreRanges[range][category as keyof typeof scoreRanges[typeof range]]++;
+        const categoryKey = category as keyof typeof scoreRanges[typeof range];
+        scoreRanges[range][categoryKey]++;
       });
     });
 
@@ -219,7 +220,7 @@ const DataVisualization = ({ results }: DataVisualizationProps) => {
         </CardContent>
       </Card>
 
-      {/* Score Distribution Stacked Bar Chart */}
+      {/* Score Distribution Stacked Area Chart */}
       <Card className="bg-justreal-dark border-justreal-gray card-glow lg:col-span-2">
         <CardHeader>
           <CardTitle className="text-justreal-white flex items-center gap-2">

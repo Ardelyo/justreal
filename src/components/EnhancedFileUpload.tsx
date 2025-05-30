@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,7 +40,8 @@ const EnhancedFileUpload = ({ onDataLoaded }: EnhancedFileUploadProps) => {
       reader.onload = (e) => {
         try {
           const data = e.target?.result;
-          let workbook;
+          let parsedHeaders: string[] = [];
+          let parsedRows: any[] = [];
           
           if (file.name.toLowerCase().endsWith('.csv')) {
             // Handle CSV files
@@ -56,22 +56,19 @@ const EnhancedFileUpload = ({ onDataLoaded }: EnhancedFileUploadProps) => {
             const delimiter = text.includes('\t') ? '\t' : 
                            text.includes(';') ? ';' : ',';
             
-            const headers = lines[0].split(delimiter).map(h => h.trim().replace(/"/g, ''));
-            const rows = lines.slice(1).map(line => {
+            parsedHeaders = lines[0].split(delimiter).map(h => h.trim().replace(/"/g, ''));
+            parsedRows = lines.slice(1).map(line => {
               const values = line.split(delimiter).map(v => v.trim().replace(/"/g, ''));
               const row: any = {};
-              headers.forEach((header, index) => {
+              parsedHeaders.forEach((header, index) => {
                 row[header] = values[index] || '';
               });
               return row;
             });
             
-            setColumns(headers);
-            setFileData(rows);
-            
           } else {
             // Handle Excel files
-            workbook = XLSX.read(data, { type: 'array' });
+            const workbook = XLSX.read(data, { type: 'array' });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
@@ -80,22 +77,22 @@ const EnhancedFileUpload = ({ onDataLoaded }: EnhancedFileUploadProps) => {
               throw new Error('File Excel kosong');
             }
             
-            const headers = (jsonData[0] as string[]).filter(h => h);
-            const rows = jsonData.slice(1).map((row: any) => {
+            parsedHeaders = (jsonData[0] as string[]).filter(h => h);
+            parsedRows = jsonData.slice(1).map((row: any) => {
               const rowObj: any = {};
-              headers.forEach((header, index) => {
+              parsedHeaders.forEach((header, index) => {
                 rowObj[header] = row[index] || '';
               });
               return rowObj;
             }).filter(row => Object.values(row).some(val => val && val.toString().trim()));
-            
-            setColumns(headers);
-            setFileData(rows);
           }
           
+          setColumns(parsedHeaders);
+          setFileData(parsedRows);
+          
           // Calculate statistics
-          const totalRows = fileData.length;
-          const validComments = fileData.filter(row => 
+          const totalRows = parsedRows.length;
+          const validComments = parsedRows.filter(row => 
             Object.values(row).some(val => val && val.toString().trim().length > 10)
           ).length;
           const emptyRows = totalRows - validComments;
@@ -104,7 +101,7 @@ const EnhancedFileUpload = ({ onDataLoaded }: EnhancedFileUploadProps) => {
           
           toast({
             title: "File berhasil dimuat",
-            description: `${totalRows} baris data ditemukan dengan ${headers.length} kolom`
+            description: `${totalRows} baris data ditemukan dengan ${parsedHeaders.length} kolom`
           });
           
         } catch (error) {
@@ -134,7 +131,7 @@ const EnhancedFileUpload = ({ onDataLoaded }: EnhancedFileUploadProps) => {
       });
       setIsProcessing(false);
     }
-  }, [fileData.length, toast]);
+  }, [toast]);
 
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -209,22 +206,22 @@ const EnhancedFileUpload = ({ onDataLoaded }: EnhancedFileUploadProps) => {
         throw new Error('Google Sheet kosong');
       }
       
-      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-      const rows = lines.slice(1).map(line => {
+      const parsedHeaders = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      const parsedRows = lines.slice(1).map(line => {
         const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
         const row: any = {};
-        headers.forEach((header, index) => {
+        parsedHeaders.forEach((header, index) => {
           row[header] = values[index] || '';
         });
         return row;
       }).filter(row => Object.values(row).some(val => val && val.toString().trim()));
       
-      setColumns(headers);
-      setFileData(rows);
+      setColumns(parsedHeaders);
+      setFileData(parsedRows);
       
       // Calculate statistics
-      const totalRows = rows.length;
-      const validComments = rows.filter(row => 
+      const totalRows = parsedRows.length;
+      const validComments = parsedRows.filter(row => 
         Object.values(row).some(val => val && val.toString().trim().length > 10)
       ).length;
       const emptyRows = totalRows - validComments;
@@ -233,7 +230,7 @@ const EnhancedFileUpload = ({ onDataLoaded }: EnhancedFileUploadProps) => {
       
       toast({
         title: "Google Sheet berhasil dimuat",
-        description: `${totalRows} baris data ditemukan dengan ${headers.length} kolom`
+        description: `${totalRows} baris data ditemukan dengan ${parsedHeaders.length} kolom`
       });
       
     } catch (error) {
