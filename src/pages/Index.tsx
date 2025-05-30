@@ -8,11 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Eye, Shield, Brain, Target, Upload, FileSpreadsheet } from 'lucide-react';
+import { Loader2, Eye, Shield, Brain, Target, Upload, FileSpreadsheet, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import AnalysisResults from '@/components/AnalysisResults';
+import EnhancedAnalysisResults from '@/components/EnhancedAnalysisResults';
 import AboutSection from '@/components/AboutSection';
-import FileUpload from '@/components/FileUpload';
+import EnhancedFileUpload from '@/components/EnhancedFileUpload';
 import TransparencyModal from '@/components/TransparencyModal';
 
 interface AnalysisResult {
@@ -50,25 +50,25 @@ const Index = () => {
     { 
       value: 'openai', 
       label: 'OpenAI', 
-      models: ['gpt-3.5-turbo', 'gpt-4o-mini', 'gpt-4o'],
+      models: ['gpt-3.5-turbo', 'gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo'],
       endpoint: 'https://api.openai.com/v1/chat/completions'
     },
     { 
       value: 'gemini', 
       label: 'Google Gemini', 
-      models: ['gemini-1.5-flash', 'gemini-1.5-pro'],
+      models: ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro'],
       endpoint: 'https://generativelanguage.googleapis.com/v1beta/models'
     },
     { 
       value: 'openrouter', 
       label: 'OpenRouter', 
-      models: ['meta-llama/llama-3.1-8b-instruct:free', 'google/gemma-2-9b-it:free', 'microsoft/phi-3-mini-128k-instruct:free'],
+      models: ['meta-llama/llama-3.1-8b-instruct:free', 'google/gemma-2-9b-it:free', 'microsoft/phi-3-mini-128k-instruct:free', 'meta-llama/llama-3.2-3b-instruct:free'],
       endpoint: 'https://openrouter.ai/api/v1/chat/completions'
     },
     { 
       value: 'huggingface', 
       label: 'Hugging Face', 
-      models: ['microsoft/DialoGPT-medium', 'google/flan-t5-large', 'meta-llama/Llama-2-7b-chat-hf'],
+      models: ['microsoft/DialoGPT-medium', 'google/flan-t5-large', 'meta-llama/Llama-2-7b-chat-hf', 'mistralai/Mixtral-8x7B-Instruct-v0.1'],
       endpoint: 'https://api-inference.huggingface.co/models'
     }
   ];
@@ -176,7 +176,8 @@ Analisis komentar berikut: "${commentText}"`;
       }
 
       if (!response?.ok) {
-        throw new Error(`API Error: ${response?.status} ${response?.statusText}`);
+        const errorText = await response?.text();
+        throw new Error(`API Error: ${response?.status} ${response?.statusText}${errorText ? ` - ${errorText}` : ''}`);
       }
 
       const data = await response.json();
@@ -189,6 +190,8 @@ Analisis komentar berikut: "${commentText}"`;
       } else if (provider === 'huggingface') {
         aiResponse = data[0]?.generated_text || data.generated_text || '';
       }
+
+      console.log('AI Response:', aiResponse);
 
       // Try to parse JSON from AI response
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
@@ -207,6 +210,7 @@ Analisis komentar berikut: "${commentText}"`;
         };
       } else {
         // Fallback if JSON parsing fails
+        console.warn('Failed to parse JSON response, using fallback');
         return {
           original_comment: commentText,
           klasifikasi: ['NETRAL_POSITIF'],
@@ -243,9 +247,11 @@ Analisis komentar berikut: "${commentText}"`;
       setResult(analysisResult);
       toast({
         title: "Analisis Selesai",
-        description: "Komentar berhasil dianalisis menggunakan sistem REAL"
+        description: "Komentar berhasil dianalisis menggunakan sistem REAL",
+        duration: 3000
       });
     } catch (error) {
+      console.error('Single analysis error:', error);
       toast({
         title: "Error",
         description: `Terjadi kesalahan saat menganalisis: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -272,6 +278,13 @@ Analisis komentar berikut: "${commentText}"`;
     try {
       const results: AnalysisResult[] = [];
       
+      // Initialize batch results
+      setBatchResults({
+        results: [],
+        total: uploadedData.length,
+        processed: 0
+      });
+      
       for (let i = 0; i < uploadedData.length; i++) {
         const commentText = uploadedData[i];
         if (commentText.trim()) {
@@ -286,15 +299,18 @@ Analisis komentar berikut: "${commentText}"`;
               processed: i + 1
             });
             
-            // Small delay to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Small delay to avoid rate limiting and provide visual feedback
+            if (i < uploadedData.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 1500));
+            }
           } catch (error) {
             console.error(`Error analyzing comment ${i + 1}:`, error);
-            // Continue with next comment
+            // Continue with next comment even if one fails
           }
         }
       }
       
+      // Final update
       setBatchResults({
         results,
         total: uploadedData.length,
@@ -303,9 +319,11 @@ Analisis komentar berikut: "${commentText}"`;
       
       toast({
         title: "Analisis Batch Selesai",
-        description: `${results.length} dari ${uploadedData.length} komentar berhasil dianalisis`
+        description: `${results.length} dari ${uploadedData.length} komentar berhasil dianalisis`,
+        duration: 5000
       });
     } catch (error) {
+      console.error('Batch analysis error:', error);
       toast({
         title: "Error",
         description: `Terjadi kesalahan saat analisis batch: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -316,70 +334,89 @@ Analisis komentar berikut: "${commentText}"`;
     }
   };
 
+  const handleClearResults = () => {
+    setResult(null);
+    setBatchResults(null);
+    setComment('');
+    setUploadedData([]);
+    toast({
+      title: "Hasil dibersihkan",
+      description: "Semua hasil analisis telah dihapus"
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-justreal-black via-justreal-dark to-justreal-black">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
+        {/* Enhanced Header */}
         <div className="text-center mb-12 animate-fade-in">
-          <h1 className="text-6xl font-bold mb-4">
-            <span className="gradient-text">JustReal</span>
-          </h1>
+          <div className="flex justify-center items-center mb-4">
+            <Sparkles className="w-8 h-8 text-justreal-red mr-3" />
+            <h1 className="text-6xl font-bold">
+              <span className="gradient-text">JustReal</span>
+            </h1>
+            <Sparkles className="w-8 h-8 text-justreal-red ml-3" />
+          </div>
           <p className="text-xl text-justreal-gray-light mb-2">
             Rangkaian Evaluasi Anti-Lidah yang Lebih Sederhana dan Langsung
           </p>
-          <p className="text-justreal-gray-light">
-            Analisis Komentar Cerdas, Ruang Digital Sehat
+          <p className="text-justreal-gray-light mb-6">
+            Analisis Komentar Cerdas, Ruang Digital Sehat dengan AI Transparan
           </p>
           
-          {/* Feature badges */}
+          {/* Enhanced Feature badges */}
           <div className="flex flex-wrap justify-center gap-3 mt-6">
-            <Badge variant="outline" className="bg-justreal-dark border-justreal-red text-justreal-white">
+            <Badge variant="outline" className="bg-justreal-dark border-justreal-red text-justreal-white hover:bg-justreal-red transition-colors">
               <Brain className="w-4 h-4 mr-2" />
-              AI-Powered
+              AI Multi-Provider
             </Badge>
-            <Badge variant="outline" className="bg-justreal-dark border-justreal-red text-justreal-white">
+            <Badge variant="outline" className="bg-justreal-dark border-justreal-red text-justreal-white hover:bg-justreal-red transition-colors">
               <Shield className="w-4 h-4 mr-2" />
-              Transparent
+              100% Transparan
             </Badge>
-            <Badge variant="outline" className="bg-justreal-dark border-justreal-red text-justreal-white">
+            <Badge variant="outline" className="bg-justreal-dark border-justreal-red text-justreal-white hover:bg-justreal-red transition-colors">
               <Target className="w-4 h-4 mr-2" />
-              Akurat
+              Akurasi Tinggi
             </Badge>
-            <Badge variant="outline" className="bg-justreal-dark border-justreal-red text-justreal-white">
+            <Badge variant="outline" className="bg-justreal-dark border-justreal-red text-justreal-white hover:bg-justreal-red transition-colors">
               <Eye className="w-4 h-4 mr-2" />
               Privacy-First
+            </Badge>
+            <Badge variant="outline" className="bg-justreal-dark border-justreal-red text-justreal-white hover:bg-justreal-red transition-colors">
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Batch Processing
             </Badge>
           </div>
 
           {/* Transparency Button */}
-          <div className="mt-4">
+          <div className="mt-6">
             <Button 
               variant="outline" 
               onClick={() => setShowTransparency(true)}
-              className="border-justreal-red text-justreal-red hover:bg-justreal-red hover:text-white"
+              className="border-justreal-red text-justreal-red hover:bg-justreal-red hover:text-white transition-all duration-300"
             >
               <Eye className="w-4 h-4 mr-2" />
-              Lihat Cara Kerja & Sistem Instruksi
+              Lihat Cara Kerja & Sistem Instruksi REAL
             </Button>
           </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Configuration Panel */}
+          {/* Enhanced Configuration Panel */}
           <div className="lg:col-span-1">
             <Card className="bg-justreal-dark border-justreal-gray card-glow mb-6">
               <CardHeader>
                 <CardTitle className="text-justreal-white flex items-center gap-2">
                   <Brain className="w-5 h-5 text-justreal-red" />
-                  Konfigurasi AI
+                  Konfigurasi AI & Model
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="provider" className="text-justreal-white">Penyedia LLM</Label>
+                  <Label htmlFor="provider" className="text-justreal-white mb-2 block">Penyedia LLM</Label>
                   <Select value={provider} onValueChange={setProvider}>
-                    <SelectTrigger className="bg-justreal-black border-justreal-gray text-justreal-white">
-                      <SelectValue placeholder="Pilih penyedia..." />
+                    <SelectTrigger className="bg-justreal-black border-justreal-gray text-justreal-white hover:border-justreal-red transition-colors">
+                      <SelectValue placeholder="Pilih penyedia AI..." />
                     </SelectTrigger>
                     <SelectContent className="bg-justreal-dark border-justreal-gray">
                       {providers.map((p) => (
@@ -392,25 +429,26 @@ Analisis komentar berikut: "${commentText}"`;
                 </div>
 
                 <div>
-                  <Label htmlFor="apikey" className="text-justreal-white">API Key</Label>
+                  <Label htmlFor="apikey" className="text-justreal-white mb-2 block">API Key</Label>
                   <Input
                     id="apikey"
                     type="password"
-                    placeholder="Masukkan API key..."
+                    placeholder="Masukkan API key Anda..."
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
-                    className="bg-justreal-black border-justreal-gray text-justreal-white placeholder:text-justreal-gray-light"
+                    className="bg-justreal-black border-justreal-gray text-justreal-white placeholder:text-justreal-gray-light focus:border-justreal-red transition-colors"
                   />
-                  <p className="text-xs text-justreal-gray-light mt-1">
-                    🔒 API key tidak disimpan di server kami
+                  <p className="text-xs text-justreal-gray-light mt-2 flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    API key tidak disimpan dan hanya digunakan untuk sesi ini
                   </p>
                 </div>
 
                 {provider && (
                   <div>
-                    <Label htmlFor="model" className="text-justreal-white">Model (Rekomendasi)</Label>
+                    <Label htmlFor="model" className="text-justreal-white mb-2 block">Model (Rekomendasi)</Label>
                     <Select value={model} onValueChange={setModel}>
-                      <SelectTrigger className="bg-justreal-black border-justreal-gray text-justreal-white">
+                      <SelectTrigger className="bg-justreal-black border-justreal-gray text-justreal-white hover:border-justreal-red transition-colors">
                         <SelectValue placeholder="Pilih model..." />
                       </SelectTrigger>
                       <SelectContent className="bg-justreal-dark border-justreal-gray">
@@ -425,13 +463,13 @@ Analisis komentar berikut: "${commentText}"`;
                 )}
 
                 <div>
-                  <Label htmlFor="customModel" className="text-justreal-white">Model Kustom (Opsional)</Label>
+                  <Label htmlFor="customModel" className="text-justreal-white mb-2 block">Model Kustom (Opsional)</Label>
                   <Input
                     id="customModel"
-                    placeholder="Masukkan nama model kustom..."
+                    placeholder="misal: gpt-4-turbo-preview"
                     value={customModel}
                     onChange={(e) => setCustomModel(e.target.value)}
-                    className="bg-justreal-black border-justreal-gray text-justreal-white placeholder:text-justreal-gray-light"
+                    className="bg-justreal-black border-justreal-gray text-justreal-white placeholder:text-justreal-gray-light focus:border-justreal-red transition-colors"
                   />
                   <p className="text-xs text-justreal-gray-light mt-1">
                     Akan menggantikan model yang dipilih di atas
@@ -439,9 +477,12 @@ Analisis komentar berikut: "${commentText}"`;
                 </div>
 
                 {getEffectiveModel() && (
-                  <div className="bg-justreal-black p-3 rounded border border-justreal-gray">
-                    <p className="text-sm text-justreal-gray-light">Model yang digunakan:</p>
-                    <p className="text-justreal-white font-mono text-sm">{getEffectiveModel()}</p>
+                  <div className="bg-justreal-black p-4 rounded-lg border border-justreal-gray">
+                    <p className="text-sm text-justreal-gray-light mb-1">Model yang akan digunakan:</p>
+                    <p className="text-justreal-white font-mono text-sm font-semibold">{getEffectiveModel()}</p>
+                    <p className="text-xs text-justreal-gray-light mt-1">
+                      Provider: {providers.find(p => p.value === provider)?.label}
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -450,76 +491,103 @@ Analisis komentar berikut: "${commentText}"`;
             <AboutSection />
           </div>
 
-          {/* Analysis Panel */}
+          {/* Enhanced Analysis Panel */}
           <div className="lg:col-span-2">
             <Card className="bg-justreal-dark border-justreal-gray card-glow mb-6">
               <CardHeader>
                 <CardTitle className="text-justreal-white flex items-center gap-2">
                   <Target className="w-5 h-5 text-justreal-red" />
-                  Analisis Komentar
+                  Analisis Komentar Berbasis AI
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="single" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 bg-justreal-black">
-                    <TabsTrigger value="single" className="data-[state=active]:bg-justreal-red data-[state=active]:text-white">
+                  <TabsList className="grid w-full grid-cols-2 bg-justreal-black mb-6">
+                    <TabsTrigger 
+                      value="single" 
+                      className="data-[state=active]:bg-justreal-red data-[state=active]:text-white transition-all duration-300"
+                    >
                       Komentar Tunggal
                     </TabsTrigger>
-                    <TabsTrigger value="batch" className="data-[state=active]:bg-justreal-red data-[state=active]:text-white">
+                    <TabsTrigger 
+                      value="batch" 
+                      className="data-[state=active]:bg-justreal-red data-[state=active]:text-white transition-all duration-300"
+                    >
                       <Upload className="w-4 h-4 mr-2" />
-                      Upload File
+                      Upload File / Batch
                     </TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="single" className="space-y-4 mt-4">
                     <div>
-                      <Label htmlFor="comment" className="text-justreal-white">Komentar untuk Dianalisis</Label>
+                      <Label htmlFor="comment" className="text-justreal-white mb-3 block">Komentar untuk Dianalisis</Label>
                       <Textarea
                         id="comment"
-                        placeholder="Masukkan atau tempelkan komentar yang ingin dianalisis..."
+                        placeholder="Masukkan atau tempelkan komentar yang ingin dianalisis oleh sistem REAL..."
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
-                        className="bg-justreal-black border-justreal-gray text-justreal-white placeholder:text-justreal-gray-light min-h-[120px]"
+                        className="bg-justreal-black border-justreal-gray text-justreal-white placeholder:text-justreal-gray-light min-h-[140px] focus:border-justreal-red transition-colors resize-none"
+                        maxLength={2000}
                       />
+                      <p className="text-xs text-justreal-gray-light mt-2">
+                        {comment.length}/2000 karakter
+                      </p>
                     </div>
 
                     <Button
                       onClick={handleAnalyzeSingle}
                       disabled={isAnalyzing || !provider || !apiKey || !comment.trim()}
-                      className="w-full bg-justreal-red hover:bg-justreal-red-dark text-white font-semibold py-3"
+                      className="w-full bg-justreal-red hover:bg-justreal-red-dark text-white font-semibold py-4 text-lg transition-all duration-300 disabled:opacity-50"
                     >
                       {isAnalyzing ? (
                         <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Menganalisis...
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Menganalisis dengan AI...
                         </>
                       ) : (
-                        'Analisis Sekarang'
+                        <>
+                          <Brain className="w-5 h-5 mr-2" />
+                          Analisis Sekarang
+                        </>
                       )}
                     </Button>
                   </TabsContent>
                   
                   <TabsContent value="batch" className="space-y-4 mt-4">
-                    <FileUpload onDataLoaded={setUploadedData} />
+                    <EnhancedFileUpload onDataLoaded={setUploadedData} />
                     
                     {uploadedData.length > 0 && (
-                      <div className="bg-justreal-black p-4 rounded border border-justreal-gray">
-                        <p className="text-justreal-white mb-2">
-                          <FileSpreadsheet className="w-4 h-4 inline mr-2" />
-                          Data dimuat: {uploadedData.length} komentar
-                        </p>
+                      <div className="bg-justreal-black p-6 rounded-lg border border-justreal-gray">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <p className="text-justreal-white font-semibold mb-1">
+                              <FileSpreadsheet className="w-5 h-5 inline mr-2" />
+                              Data Siap untuk Analisis
+                            </p>
+                            <p className="text-justreal-gray-light">
+                              {uploadedData.length} komentar telah dimuat dan siap diproses
+                            </p>
+                          </div>
+                          <Badge className="bg-justreal-red text-white px-3 py-1 text-lg font-semibold">
+                            {uploadedData.length}
+                          </Badge>
+                        </div>
+                        
                         <Button
                           onClick={handleAnalyzeBatch}
                           disabled={isAnalyzing || !provider || !apiKey}
-                          className="w-full bg-justreal-red hover:bg-justreal-red-dark text-white font-semibold py-3"
+                          className="w-full bg-justreal-red hover:bg-justreal-red-dark text-white font-semibold py-4 text-lg transition-all duration-300 disabled:opacity-50"
                         >
                           {isAnalyzing ? (
                             <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Menganalisis Batch...
+                              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                              Menganalisis Batch ({batchResults?.processed || 0}/{uploadedData.length})...
                             </>
                           ) : (
-                            'Analisis Batch'
+                            <>
+                              <Brain className="w-5 h-5 mr-2" />
+                              Mulai Analisis Batch
+                            </>
                           )}
                         </Button>
                       </div>
@@ -529,9 +597,14 @@ Analisis komentar berikut: "${commentText}"`;
               </CardContent>
             </Card>
 
-            {/* Results */}
-            {result && <AnalysisResults result={result} />}
-            {batchResults && <AnalysisResults batchResults={batchResults} />}
+            {/* Enhanced Results */}
+            {(result || batchResults) && (
+              <EnhancedAnalysisResults 
+                result={result} 
+                batchResults={batchResults}
+                onClearResults={handleClearResults}
+              />
+            )}
           </div>
         </div>
       </div>
