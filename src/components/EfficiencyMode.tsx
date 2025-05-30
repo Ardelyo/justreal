@@ -14,7 +14,16 @@ interface EfficiencyModeProps {
 
 const EfficiencyMode = ({ enabled, onToggle, commentCount }: EfficiencyModeProps) => {
   const calculateSavings = () => {
-    if (commentCount <= 1) return { calls: 1, tokens: 500, cost: 0.01 };
+    if (commentCount <= 1) {
+      return { 
+        calls: 1, 
+        callsSaved: 0, 
+        tokens: 500, 
+        tokensSaved: 0, 
+        cost: 0.01, 
+        costSaved: 0 
+      };
+    }
     
     const normalCalls = commentCount;
     const efficientCalls = Math.ceil(commentCount / 10); // Batch 10 comments per call
