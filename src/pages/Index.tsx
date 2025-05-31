@@ -1,10 +1,14 @@
-
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { AnalysisResult } from '@/types/analysis';
 import { providers } from '@/utils/aiProviders';
 import { analyzeComments } from '@/utils/apiAnalysis';
+import ModelSelector from '@/components/ai/ModelSelector';
+import D3SentimentChart from '@/components/visualization/D3SentimentChart';
+import { multiModelAI } from '@/services/multiModelAI';
+import { tensorflowService } from '@/services/tensorflowService';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Layout Components
 import Header from '@/components/layout/Header';
@@ -51,55 +55,34 @@ const Index = () => {
     setProcessedCount(0);
     
     try {
-      if (efficiencyMode && comments.length > 1) {
-        // Batch processing
-        const batchSize = 10;
-        const batches = [];
-        for (let i = 0; i < comments.length; i += batchSize) {
-          batches.push(comments.slice(i, i + batchSize));
-        }
-        
-        const allResults: AnalysisResult[] = [];
-        
-        for (let i = 0; i < batches.length; i++) {
-          const batch = batches[i];
-          const batchResults = await analyzeComments(batch, provider, apiKey, model, customModel, efficiencyMode);
-          allResults.push(...batchResults);
-          
-          setProcessedCount(allResults.length);
-          setResults([...allResults]);
-          
-          // Small delay between batches
-          if (i < batches.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          }
-        }
-        
-        setResults(allResults);
-      } else {
-        // Process individually or single comment
-        const allResults: AnalysisResult[] = [];
-        
-        for (let i = 0; i < comments.length; i++) {
-          const result = await analyzeComments([comments[i]], provider, apiKey, model, customModel, efficiencyMode);
-          allResults.push(...result);
-          
-          setProcessedCount(i + 1);
-          setResults([...allResults]);
-          
-          if (i < comments.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-          }
-        }
-      }
+      // Initialize TensorFlow.js service
+      await tensorflowService.initialize();
+      
+      toast({
+        title: "Memulai Analisis Enhanced",
+        description: "Menggunakan AI multi-model dengan TensorFlow.js untuk analisis mendalam",
+        duration: 3000
+      });
+
+      // Use the new multi-model AI service
+      const analysisResults = await multiModelAI.analyzeComments(
+        comments,
+        provider,
+        apiKey,
+        customModel.trim() || model,
+        efficiencyMode
+      );
+
+      setResults(analysisResults);
+      setProcessedCount(analysisResults.length);
       
       toast({
         title: "Analisis Selesai",
-        description: `${comments.length} komentar berhasil dianalisis menggunakan sistem REAL v2.0`,
+        description: `${comments.length} komentar berhasil dianalisis menggunakan sistem REAL v3.0 dengan TensorFlow.js`,
         duration: 5000
       });
     } catch (error) {
-      console.error('Analysis error:', error);
+      console.error('Enhanced analysis error:', error);
       toast({
         title: "Kesalahan",
         description: `Terjadi kesalahan saat menganalisis: ${error instanceof Error ? error.message : 'Kesalahan tidak diketahui'}`,
@@ -111,13 +94,20 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-justreal-black via-justreal-dark to-justreal-black">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.8 }}
+      className="min-h-screen bg-gradient-to-br from-justreal-black via-justreal-dark to-justreal-black"
+    >
       <div className="container mx-auto px-4 py-8">
         <Header />
 
         <div className="grid lg:grid-cols-4 gap-8">
-          {/* Configuration Panel */}
+          {/* Enhanced Configuration Panel */}
           <div className="lg:col-span-1 space-y-6">
+            <ModelSelector />
+
             <AIConfigPanel
               provider={provider}
               setProvider={setProvider}
@@ -139,61 +129,88 @@ const Index = () => {
             <Credits />
           </div>
 
-          {/* Main Analysis Panel */}
+          {/* Enhanced Main Analysis Panel */}
           <div className="lg:col-span-3 space-y-6">
             <CommentPasteArea 
               comments={comments}
               onCommentsChange={setComments}
             />
 
-            {comments.length > 0 && (
-              <AnalysisButton
-                onAnalyze={handleAnalyze}
-                isAnalyzing={isAnalyzing}
-                provider={provider}
-                apiKey={apiKey}
-                commentCount={comments.length}
-                processedCount={processedCount}
-              />
-            )}
+            <AnimatePresence>
+              {comments.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <AnalysisButton
+                    onAnalyze={handleAnalyze}
+                    isAnalyzing={isAnalyzing}
+                    provider={provider}
+                    apiKey={apiKey}
+                    commentCount={comments.length}
+                    processedCount={processedCount}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {/* Results */}
-            {results.length > 0 && (
-              <Tabs defaultValue="visualization" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 bg-justreal-black mb-6">
-                  <TabsTrigger 
-                    value="visualization" 
-                    className="data-[state=active]:bg-justreal-red data-[state=active]:text-white transition-all duration-300"
-                  >
-                    Visualisasi Data
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="words" 
-                    className="data-[state=active]:bg-justreal-red data-[state=active]:text-white transition-all duration-300"
-                  >
-                    Analisis Kata
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="table" 
-                    className="data-[state=active]:bg-justreal-red data-[state=active]:text-white transition-all duration-300"
-                  >
-                    Tabel Detail
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="visualization" className="mt-4">
-                  <DataVisualization results={results} />
-                </TabsContent>
-                
-                <TabsContent value="words" className="mt-4">
-                  <AdvancedWordAnalyzer analysisResults={results} />
-                </TabsContent>
-                
-                <TabsContent value="table" className="mt-4">
-                  <DataVisualization results={results} />
-                </TabsContent>
-              </Tabs>
-            )}
+            {/* Enhanced Results with D3.js Visualization */}
+            <AnimatePresence>
+              {results.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <Tabs defaultValue="d3-charts" className="w-full">
+                    <TabsList className="grid w-full grid-cols-4 bg-justreal-black mb-6">
+                      <TabsTrigger 
+                        value="d3-charts" 
+                        className="data-[state=active]:bg-justreal-red data-[state=active]:text-white transition-all duration-300"
+                      >
+                        D3.js Charts
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="visualization" 
+                        className="data-[state=active]:bg-justreal-red data-[state=active]:text-white transition-all duration-300"
+                      >
+                        Visualisasi Data
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="words" 
+                        className="data-[state=active]:bg-justreal-red data-[state=active]:text-white transition-all duration-300"
+                      >
+                        TensorFlow Analysis
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="table" 
+                        className="data-[state=active]:bg-justreal-red data-[state=active]:text-white transition-all duration-300"
+                      >
+                        Tabel Detail
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="d3-charts" className="mt-4">
+                      <D3SentimentChart results={results} />
+                    </TabsContent>
+                    
+                    <TabsContent value="visualization" className="mt-4">
+                      <DataVisualization results={results} />
+                    </TabsContent>
+                    
+                    <TabsContent value="words" className="mt-4">
+                      <AdvancedWordAnalyzer analysisResults={results} />
+                    </TabsContent>
+                    
+                    <TabsContent value="table" className="mt-4">
+                      <DataVisualization results={results} />
+                    </TabsContent>
+                  </Tabs>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
@@ -202,7 +219,7 @@ const Index = () => {
         open={showTransparency} 
         onOpenChange={setShowTransparency} 
       />
-    </div>
+    </motion.div>
   );
 };
 
