@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
@@ -69,14 +68,17 @@ const Index = () => {
     setProcessedCount(0);
     
     try {
+      // Initialize TensorFlow.js service
+      await tensorflowService.initialize();
+      
       toast({
         title: "Memulai Analisis Enhanced",
-        description: "Menggunakan AI multi-model dengan sistem REAL v3.0",
+        description: "Menggunakan AI multi-model dengan TensorFlow.js untuk analisis mendalam",
         duration: 3000
       });
 
-      // Use the existing analyzeComments function with enhanced features
-      const analysisResults = await analyzeComments(
+      // Use the new multi-model AI service with correct arguments
+      const analysisResults = await multiModelAI.analyzeComments(
         comments,
         provider,
         apiKey,
@@ -89,7 +91,7 @@ const Index = () => {
       
       toast({
         title: "Analisis Selesai",
-        description: `${comments.length} komentar berhasil dianalisis menggunakan sistem REAL v3.0`,
+        description: `${comments.length} komentar berhasil dianalisis menggunakan sistem REAL v3.0 dengan TensorFlow.js`,
         duration: 5000
       });
     } catch (error) {

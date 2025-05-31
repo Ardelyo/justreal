@@ -29,8 +29,8 @@ class MultiModelAI implements MultiModelAIService {
     efficiencyMode: boolean
   ): Promise<AnalysisResult[]> {
     try {
-      // Use the existing analyzeComments function as the base
-      const results = await analyzeComments(comments, provider, apiKey, model, efficiencyMode);
+      // Use the existing analyzeComments function with correct arguments
+      const results = await analyzeComments(comments, provider, apiKey, model, '', efficiencyMode);
       
       // Enhance results with additional multi-model processing
       return results.map(result => ({

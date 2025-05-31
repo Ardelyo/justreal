@@ -94,27 +94,27 @@ const D3SentimentChart: React.FC<D3SentimentChartProps> = ({
       .attr('stop-color', '#16a34a')
       .attr('stop-opacity', 0.6);
 
-    // Line generators
-    const positifLine = d3.line<any>()
-      .x(d => xScale(d.index))
-      .y(d => yScale(d.positif))
+    // Line generators - Fixed: removed type arguments from untyped functions
+    const positifLine = d3.line()
+      .x((d: any) => xScale(d.index))
+      .y((d: any) => yScale(d.positif))
       .curve(d3.curveCardinal);
 
-    const negatifLine = d3.line<any>()
-      .x(d => xScale(d.index))
-      .y(d => yScale(d.negatif))
+    const negatifLine = d3.line()
+      .x((d: any) => xScale(d.index))
+      .y((d: any) => yScale(d.negatif))
       .curve(d3.curveCardinal);
 
-    const netralLine = d3.line<any>()
-      .x(d => xScale(d.index))
-      .y(d => yScale(d.netral))
+    const netralLine = d3.line()
+      .x((d: any) => xScale(d.index))
+      .y((d: any) => yScale(d.netral))
       .curve(d3.curveCardinal);
 
-    // Area generator for positive sentiment
-    const area = d3.area<any>()
-      .x(d => xScale(d.index))
+    // Area generator for positive sentiment - Fixed: removed type arguments
+    const area = d3.area()
+      .x((d: any) => xScale(d.index))
       .y0(innerHeight)
-      .y1(d => yScale(d.positif))
+      .y1((d: any) => yScale(d.positif))
       .curve(d3.curveCardinal);
 
     // Add area
@@ -158,10 +158,10 @@ const D3SentimentChart: React.FC<D3SentimentChartProps> = ({
       .data(sentimentData)
       .enter().append('circle')
       .attr('class', 'dot')
-      .attr('cx', d => xScale(d.index))
-      .attr('cy', d => yScale(d.positif))
+      .attr('cx', (d: any) => xScale(d.index))
+      .attr('cy', (d: any) => yScale(d.positif))
       .attr('r', 0)
-      .attr('fill', d => colorScale(d.sentiment) as string)
+      .attr('fill', (d: any) => colorScale(d.sentiment) as string)
       .attr('stroke', '#fff')
       .attr('stroke-width', 2)
       .style('cursor', 'pointer');
@@ -169,7 +169,7 @@ const D3SentimentChart: React.FC<D3SentimentChartProps> = ({
     // Animate dots
     dots.transition()
       .duration(800)
-      .delay((d, i) => i * 50)
+      .delay((d: any, i: number) => i * 50)
       .attr('r', 6);
 
     // Add tooltip
@@ -189,7 +189,7 @@ const D3SentimentChart: React.FC<D3SentimentChartProps> = ({
     }
 
     dots
-      .on('mouseover', function(event, d) {
+      .on('mouseover', function(event: any, d: any) {
         d3.select(this)
           .transition()
           .duration(200)
@@ -224,7 +224,7 @@ const D3SentimentChart: React.FC<D3SentimentChartProps> = ({
 
     // Add axes
     const xAxis = d3.axisBottom(xScale)
-      .tickFormat(d => `#${d + 1}`);
+      .tickFormat((d: any) => `#${d + 1}`);
     
     const yAxis = d3.axisLeft(yScale)
       .tickFormat(d3.format('.0%'));
