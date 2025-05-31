@@ -116,7 +116,7 @@ export const analyzeComments = async (
           penjelasan_singkat: parsedResult.penjelasan_singkat || 'Analisis berhasil dilakukan.',
           sentimen_umum: parsedResult.sentimen_umum || 'NETRAL',
           tingkat_toksisitas: parsedResult.tingkat_toksisitas || 0.1
-        }]);
+        }];
       }
     } else {
       throw new Error('Invalid JSON response from AI');
