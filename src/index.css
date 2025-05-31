@@ -53,21 +53,23 @@
 
   body {
     @apply bg-justreal-black text-justreal-white font-sans;
-    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
     min-height: 100vh;
   }
 
-  /* Custom scrollbar */
+  /* Custom scrollbar dengan animasi */
   ::-webkit-scrollbar {
     width: 8px;
   }
 
   ::-webkit-scrollbar-track {
     @apply bg-justreal-dark;
+    border-radius: 10px;
   }
 
   ::-webkit-scrollbar-thumb {
     @apply bg-justreal-red rounded-full;
+    transition: background-color 0.3s ease;
   }
 
   ::-webkit-scrollbar-thumb:hover {
@@ -77,18 +79,100 @@
 
 @layer components {
   .gradient-text {
-    background: linear-gradient(135deg, #dc2626, #ffffff);
+    background: linear-gradient(135deg, #dc2626, #ffffff, #dc2626);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    animation: gradient-shift 3s ease-in-out infinite;
   }
 
   .card-glow {
     box-shadow: 0 0 20px rgba(220, 38, 38, 0.1);
-    transition: box-shadow 0.3s ease;
+    transition: all 0.3s ease;
   }
 
   .card-glow:hover {
     box-shadow: 0 0 30px rgba(220, 38, 38, 0.2);
   }
+
+  .card-glow-intense {
+    box-shadow: 0 0 40px rgba(220, 38, 38, 0.3);
+  }
 }
+
+@layer utilities {
+  /* Enhanced animations */
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 10px rgba(220, 38, 38, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(220, 38, 38, 0.6);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.6s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.4s ease-out forwards;
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+}
+
+/* Custom JustReal color palette */
+@layer base {
+  :root {
+    --justreal-black: #0a0a0a;
+    --justreal-dark: #1a1a1a;
+    --justreal-gray: #333333;
+    --justreal-gray-light: #888888;
+    --justreal-white: #ffffff;
+    --justreal-red: #dc2626;
+    --justreal-red-dark: #b91c1c;
+  }
+}
+
+.bg-justreal-black { background-color: var(--justreal-black); }
+.bg-justreal-dark { background-color: var(--justreal-dark); }
+.bg-justreal-gray { background-color: var(--justreal-gray); }
+.text-justreal-white { color: var(--justreal-white); }
+.text-justreal-gray-light { color: var(--justreal-gray-light); }
+.text-justreal-red { color: var(--justreal-red); }
+.border-justreal-gray { border-color: var(--justreal-gray); }
+.border-justreal-red { border-color: var(--justreal-red); }
+.hover\:bg-justreal-red:hover { background-color: var(--justreal-red); }
+.hover\:bg-justreal-red-dark:hover { background-color: var(--justreal-red-dark); }
+.hover\:border-justreal-red:hover { border-color: var(--justreal-red); }
+.hover\:text-justreal-red:hover { color: var(--justreal-red); }

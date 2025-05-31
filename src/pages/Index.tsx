@@ -14,11 +14,11 @@ import AIConfigPanel from '@/components/configuration/AIConfigPanel';
 
 // Analysis Components
 import AnalysisButton from '@/components/analysis/AnalysisButton';
+import AdvancedWordAnalyzer from '@/components/analysis/AdvancedWordAnalyzer';
 
 // Feature Components
 import DataVisualization from '@/components/DataVisualization';
 import CommentPasteArea from '@/components/CommentPasteArea';
-import WordAnalysis from '@/components/WordAnalysis';
 import EfficiencyMode from '@/components/EfficiencyMode';
 import Credits from '@/components/Credits';
 import TransparencyModal from '@/components/TransparencyModal';
@@ -39,7 +39,7 @@ const Index = () => {
   const handleAnalyze = async () => {
     if (!provider || !apiKey || comments.length === 0) {
       toast({
-        title: "Error",
+        title: "Kesalahan",
         description: "Mohon lengkapi penyedia AI, API key, dan tambahkan komentar untuk dianalisis",
         variant: "destructive"
       });
@@ -101,8 +101,8 @@ const Index = () => {
     } catch (error) {
       console.error('Analysis error:', error);
       toast({
-        title: "Error",
-        description: `Terjadi kesalahan saat menganalisis: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        title: "Kesalahan",
+        description: `Terjadi kesalahan saat menganalisis: ${error instanceof Error ? error.message : 'Kesalahan tidak diketahui'}`,
         variant: "destructive"
       });
     } finally {
@@ -165,19 +165,19 @@ const Index = () => {
                     value="visualization" 
                     className="data-[state=active]:bg-justreal-red data-[state=active]:text-white transition-all duration-300"
                   >
-                    Data Visualization
+                    Visualisasi Data
                   </TabsTrigger>
                   <TabsTrigger 
                     value="words" 
                     className="data-[state=active]:bg-justreal-red data-[state=active]:text-white transition-all duration-300"
                   >
-                    Word Analysis
+                    Analisis Kata
                   </TabsTrigger>
                   <TabsTrigger 
                     value="table" 
                     className="data-[state=active]:bg-justreal-red data-[state=active]:text-white transition-all duration-300"
                   >
-                    Detailed Table
+                    Tabel Detail
                   </TabsTrigger>
                 </TabsList>
                 
@@ -186,7 +186,7 @@ const Index = () => {
                 </TabsContent>
                 
                 <TabsContent value="words" className="mt-4">
-                  <WordAnalysis analysisResults={results} />
+                  <AdvancedWordAnalyzer analysisResults={results} />
                 </TabsContent>
                 
                 <TabsContent value="table" className="mt-4">
