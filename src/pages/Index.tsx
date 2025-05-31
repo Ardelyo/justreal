@@ -1,9 +1,12 @@
+
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { AnalysisResult } from '@/types/analysis';
 import { providers } from '@/utils/aiProviders';
 import { analyzeComments } from '@/utils/apiAnalysis';
+import { multiModelAI } from '@/services/multiModelAI';
+import { tensorflowService } from '@/services/tensorflowService';
 import ModelSelector from '@/components/ai/ModelSelector';
 import D3SentimentChart from '@/components/visualization/D3SentimentChart';
 
