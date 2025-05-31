@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
@@ -6,9 +7,22 @@ import { providers } from '@/utils/aiProviders';
 import { analyzeComments } from '@/utils/apiAnalysis';
 import ModelSelector from '@/components/ai/ModelSelector';
 import D3SentimentChart from '@/components/visualization/D3SentimentChart';
-import { multiModelAI } from '@/services/multiModelAI';
-import { tensorflowService } from '@/services/tensorflowService';
-import { motion, AnimatePresence } from 'framer-motion';
+
+// Import motion with fallback
+let motion: any;
+let AnimatePresence: any;
+
+try {
+  const framerMotion = require('framer-motion');
+  motion = framerMotion.motion;
+  AnimatePresence = framerMotion.AnimatePresence;
+} catch {
+  // Fallback if framer-motion is not available
+  motion = {
+    div: ({ children, className, ...props }: any) => <div className={className}>{children}</div>
+  };
+  AnimatePresence = ({ children }: any) => <>{children}</>;
+}
 
 // Layout Components
 import Header from '@/components/layout/Header';
@@ -55,17 +69,14 @@ const Index = () => {
     setProcessedCount(0);
     
     try {
-      // Initialize TensorFlow.js service
-      await tensorflowService.initialize();
-      
       toast({
         title: "Memulai Analisis Enhanced",
-        description: "Menggunakan AI multi-model dengan TensorFlow.js untuk analisis mendalam",
+        description: "Menggunakan AI multi-model dengan sistem REAL v3.0",
         duration: 3000
       });
 
-      // Use the new multi-model AI service
-      const analysisResults = await multiModelAI.analyzeComments(
+      // Use the existing analyzeComments function with enhanced features
+      const analysisResults = await analyzeComments(
         comments,
         provider,
         apiKey,
@@ -78,7 +89,7 @@ const Index = () => {
       
       toast({
         title: "Analisis Selesai",
-        description: `${comments.length} komentar berhasil dianalisis menggunakan sistem REAL v3.0 dengan TensorFlow.js`,
+        description: `${comments.length} komentar berhasil dianalisis menggunakan sistem REAL v3.0`,
         duration: 5000
       });
     } catch (error) {
@@ -182,7 +193,7 @@ const Index = () => {
                         value="words" 
                         className="data-[state=active]:bg-justreal-red data-[state=active]:text-white transition-all duration-300"
                       >
-                        TensorFlow Analysis
+                        Analisis Kata
                       </TabsTrigger>
                       <TabsTrigger 
                         value="table" 

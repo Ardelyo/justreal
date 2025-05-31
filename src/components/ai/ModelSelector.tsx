@@ -6,9 +6,19 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Brain, Zap, Target, Settings } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { useAIStore } from '@/stores/aiStore';
-import { multiModelAI } from '@/services/multiModelAI';
+
+// Import motion with fallback
+let motion: any;
+try {
+  const framerMotion = require('framer-motion');
+  motion = framerMotion.motion;
+} catch {
+  // Fallback if framer-motion is not available
+  motion = {
+    div: ({ children, className, ...props }: any) => <div className={className}>{children}</div>
+  };
+}
 
 const ModelSelector = () => {
   const {
@@ -19,12 +29,18 @@ const ModelSelector = () => {
     getAccuracyMetrics
   } = useAIStore();
 
-  const providers = multiModelAI.getAvailableProviders();
+  // Mock providers and models until multiModelAI is available
+  const providers = ['openai', 'gemini', 'claude'];
   const currentProvider = selectedModel.includes('gpt') ? 'openai' : 
                          selectedModel.includes('gemini') ? 'gemini' : 
                          selectedModel.includes('claude') ? 'claude' : 'openai';
   
-  const availableModels = multiModelAI.getModelsForProvider(currentProvider);
+  const availableModels = currentProvider === 'openai' 
+    ? ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo']
+    : currentProvider === 'gemini'
+    ? ['gemini-pro', 'gemini-1.5-pro']
+    : ['claude-3-sonnet', 'claude-3-haiku'];
+    
   const accuracy = getAccuracyMetrics();
 
   return (
@@ -46,12 +62,14 @@ const ModelSelector = () => {
             <Label className="text-justreal-white">Penyedia AI</Label>
             <div className="grid grid-cols-3 gap-2">
               {providers.map((provider) => (
-                <motion.button
+                <button
                   key={provider}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                   onClick={() => {
-                    const firstModel = multiModelAI.getModelsForProvider(provider)[0];
+                    const firstModel = provider === 'openai' 
+                      ? 'gpt-4o-mini' 
+                      : provider === 'gemini' 
+                      ? 'gemini-pro' 
+                      : 'claude-3-sonnet';
                     setSelectedModel(firstModel);
                   }}
                   className={`p-3 rounded-lg border transition-all duration-300 ${
@@ -65,7 +83,7 @@ const ModelSelector = () => {
                      provider === 'gemini' ? 'Gemini' : 
                      provider === 'claude' ? 'Claude' : provider}
                   </div>
-                </motion.button>
+                </button>
               ))}
             </div>
           </div>

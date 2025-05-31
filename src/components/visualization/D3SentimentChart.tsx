@@ -1,8 +1,27 @@
 
 import React, { useEffect, useRef } from 'react';
-import * as d3 from 'd3';
-import { motion } from 'framer-motion';
 import { AnalysisResult } from '@/types/analysis';
+
+// Import d3 and motion with fallbacks
+let d3: any;
+let motion: any;
+
+try {
+  d3 = require('d3');
+} catch {
+  // Fallback if d3 is not available
+  d3 = null;
+}
+
+try {
+  const framerMotion = require('framer-motion');
+  motion = framerMotion.motion;
+} catch {
+  // Fallback if framer-motion is not available
+  motion = {
+    div: ({ children, className, ...props }: any) => <div className={className}>{children}</div>
+  };
+}
 
 interface D3SentimentChartProps {
   results: AnalysisResult[];
@@ -18,7 +37,9 @@ const D3SentimentChart: React.FC<D3SentimentChartProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    if (!svgRef.current || results.length === 0) return;
+    if (!svgRef.current || results.length === 0 || !d3) {
+      return;
+    }
 
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
@@ -151,18 +172,21 @@ const D3SentimentChart: React.FC<D3SentimentChartProps> = ({
       .delay((d, i) => i * 50)
       .attr('r', 6);
 
-    // Add tooltips
-    const tooltip = d3.select('body').append('div')
-      .attr('class', 'tooltip')
-      .style('position', 'absolute')
-      .style('background', 'rgba(0, 0, 0, 0.9)')
-      .style('color', 'white')
-      .style('padding', '10px')
-      .style('border-radius', '8px')
-      .style('pointer-events', 'none')
-      .style('opacity', 0)
-      .style('font-size', '12px')
-      .style('z-index', 1000);
+    // Add tooltip
+    const tooltip = d3.select('body').select('.d3-tooltip');
+    if (tooltip.empty()) {
+      d3.select('body').append('div')
+        .attr('class', 'd3-tooltip')
+        .style('position', 'absolute')
+        .style('background', 'rgba(0, 0, 0, 0.9)')
+        .style('color', 'white')
+        .style('padding', '10px')
+        .style('border-radius', '8px')
+        .style('pointer-events', 'none')
+        .style('opacity', 0)
+        .style('font-size', '12px')
+        .style('z-index', 1000);
+    }
 
     dots
       .on('mouseover', function(event, d) {
@@ -171,18 +195,18 @@ const D3SentimentChart: React.FC<D3SentimentChartProps> = ({
           .duration(200)
           .attr('r', 10);
 
-        tooltip.transition()
+        d3.select('.d3-tooltip')
+          .transition()
           .duration(200)
-          .style('opacity', 1);
-        
-        tooltip.html(`
-          <strong>Komentar #${d.index + 1}</strong><br/>
-          Sentimen: ${d.sentiment}<br/>
-          Positif: ${(d.positif * 100).toFixed(1)}%<br/>
-          Negatif: ${(d.negatif * 100).toFixed(1)}%<br/>
-          Toksisitas: ${(d.toksisitas * 100).toFixed(1)}%<br/>
-          <em>${d.comment.substring(0, 50)}...</em>
-        `)
+          .style('opacity', 1)
+          .html(`
+            <strong>Komentar #${d.index + 1}</strong><br/>
+            Sentimen: ${d.sentiment}<br/>
+            Positif: ${(d.positif * 100).toFixed(1)}%<br/>
+            Negatif: ${(d.negatif * 100).toFixed(1)}%<br/>
+            Toksisitas: ${(d.toksisitas * 100).toFixed(1)}%<br/>
+            <em>${d.comment.substring(0, 50)}...</em>
+          `)
           .style('left', (event.pageX + 10) + 'px')
           .style('top', (event.pageY - 10) + 'px');
       })
@@ -192,7 +216,8 @@ const D3SentimentChart: React.FC<D3SentimentChartProps> = ({
           .duration(200)
           .attr('r', 6);
 
-        tooltip.transition()
+        d3.select('.d3-tooltip')
+          .transition()
           .duration(200)
           .style('opacity', 0);
       });
@@ -256,9 +281,41 @@ const D3SentimentChart: React.FC<D3SentimentChartProps> = ({
 
     // Cleanup function
     return () => {
-      tooltip.remove();
+      d3.select('.d3-tooltip').remove();
     };
   }, [results, width, height]);
+
+  // Fallback if D3 is not available
+  if (!d3) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="bg-justreal-dark p-4 rounded-lg border border-justreal-gray"
+      >
+        <div className="text-center text-justreal-white">
+          <h3 className="text-lg font-semibold mb-2">Sentiment Flow Chart</h3>
+          <p className="text-justreal-gray-light">
+            D3.js visualization will be available once the library is loaded.
+          </p>
+          <div className="mt-4 space-y-2">
+            {results.slice(0, 5).map((result, index) => (
+              <div key={index} className="text-left p-2 bg-justreal-black rounded">
+                <div className="text-sm text-justreal-white">
+                  Komentar #{index + 1}: {result.sentimen_umum}
+                </div>
+                <div className="text-xs text-justreal-gray-light">
+                  Positif: {(result.skor_kepercayaan.POSITIF * 100).toFixed(1)}% | 
+                  Negatif: {(result.skor_kepercayaan.NEGATIF * 100).toFixed(1)}%
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
