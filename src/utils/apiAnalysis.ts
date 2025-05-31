@@ -86,40 +86,61 @@ export const analyzeComments = async (
 
     console.log('Enhanced AI Response:', aiResponse);
 
-    // Parse JSON response
+    // Improved JSON parsing with better error handling
     const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsedResult = JSON.parse(jsonMatch[0]);
+    if (!jsonMatch) {
+      throw new Error('No valid JSON found in AI response');
+    }
+
+    let parsedResult;
+    try {
+      // Clean the JSON string before parsing
+      let jsonString = jsonMatch[0];
       
-      if (parsedResult.batch_results) {
-        // Batch response
-        return parsedResult.batch_results.map((result: any, index: number) => ({
-          original_comment: commentsToAnalyze[index],
-          klasifikasi: result.klasifikasi || ['NETRAL'],
-          skor_kepercayaan: {
-            ...result.skor_kepercayaan,
-            NETRAL_POSITIF: result.skor_kepercayaan?.POSITIF || 0.5
-          },
-          penjelasan_singkat: result.penjelasan_singkat || 'Analisis berhasil dilakukan.',
-          sentimen_umum: result.sentimen_umum || 'NETRAL',
-          tingkat_toksisitas: result.tingkat_toksisitas || 0.1
-        }));
-      } else {
-        // Single response
-        return [{
-          original_comment: commentsToAnalyze[0],
-          klasifikasi: parsedResult.klasifikasi || ['NETRAL'],
-          skor_kepercayaan: {
-            ...parsedResult.skor_kepercayaan,
-            NETRAL_POSITIF: parsedResult.skor_kepercayaan?.POSITIF || 0.5
-          },
-          penjelasan_singkat: parsedResult.penjelasan_singkat || 'Analisis berhasil dilakukan.',
-          sentimen_umum: parsedResult.sentimen_umum || 'NETRAL',
-          tingkat_toksisitas: parsedResult.tingkat_toksisitas || 0.1
-        }];
-      }
+      // Remove any trailing commas that might cause parsing issues
+      jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1');
+      
+      // Try to fix common JSON issues
+      jsonString = jsonString.replace(/,\s*}/g, '}');
+      jsonString = jsonString.replace(/,\s*]/g, ']');
+      
+      console.log('Cleaned JSON string:', jsonString);
+      
+      parsedResult = JSON.parse(jsonString);
+    } catch (parseError) {
+      console.error('JSON parsing failed:', parseError);
+      console.error('Problematic JSON:', jsonMatch[0]);
+      
+      // Fallback: create a basic result structure
+      throw new Error(`Failed to parse AI response as JSON: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`);
+    }
+    
+    if (parsedResult.batch_results) {
+      // Batch response
+      return parsedResult.batch_results.map((result: any, index: number) => ({
+        original_comment: commentsToAnalyze[index],
+        klasifikasi: result.klasifikasi || ['NETRAL'],
+        skor_kepercayaan: {
+          ...result.skor_kepercayaan,
+          NETRAL_POSITIF: result.skor_kepercayaan?.POSITIF || 0.5
+        },
+        penjelasan_singkat: result.penjelasan_singkat || 'Analisis berhasil dilakukan.',
+        sentimen_umum: result.sentimen_umum || 'NETRAL',
+        tingkat_toksisitas: result.tingkat_toksisitas || 0.1
+      }));
     } else {
-      throw new Error('Invalid JSON response from AI');
+      // Single response
+      return [{
+        original_comment: commentsToAnalyze[0],
+        klasifikasi: parsedResult.klasifikasi || ['NETRAL'],
+        skor_kepercayaan: {
+          ...parsedResult.skor_kepercayaan,
+          NETRAL_POSITIF: parsedResult.skor_kepercayaan?.POSITIF || 0.5
+        },
+        penjelasan_singkat: parsedResult.penjelasan_singkat || 'Analisis berhasil dilakukan.',
+        sentimen_umum: parsedResult.sentimen_umum || 'NETRAL',
+        tingkat_toksisitas: parsedResult.tingkat_toksisitas || 0.1
+      }];
     }
   } catch (error) {
     console.error('Analysis error:', error);
